@@ -1,158 +1,104 @@
+import 'dart:developer';
+
+import 'package:impero_task/service/api_base.dart';
 import '../model/category_model.dart';
-import '../service/api_category_list.dart';
-import '../service/api_response_status.dart';
 import 'base_provider.dart';
 
 class CategoryMediaProvider extends BaseProvider {
-  int pageNo = 1;
+
+  List<CategoryModel> catModel = [];
+  int page = 1;
   bool loading = false;
   bool lastPage = false;
-  List<CategoryModel> categoryList = [];
-  List<SubCategoriesModel> subCategoryList = [];
-  List<ProductModel> productListData = [];
-  late int id = 0;
+
+ // bool loading = false;
+  bool lastPageProduct = false;
+
+  CategoryModel? selectedCategory;
+  List<ProductModel> productModel = [];
 
   getCategoryData() async {
-
-    if (!lastPage && !loading) {
-      if (pageNo == 1) {
-        loading = true;
-        categoryList = [];
-        notifyListeners();
-      } else {
+    if (!loading) {
         loading = true;
         notifyListeners();
-      }
 
-      Map<String, dynamic> queryParams = {
-        "CategoryId":id,
-        "DeviceManufacturer":"Google",
-        "DeviceModel":"Android SDK built for x86",
-        "DeviceToken":" ",
-        "PageIndex":1
-      };
-
-
-      ApiCategoryList.getCategoryData(queryParams, (response) {
-        if (response.status == Status.COMPLETED) {
-
-          loading  = false;
-
-          final List catList = (response.data['Category'] as List);
-
-          categoryList.addAll(catList
-              .map((val) => CategoryModel.fromJson(val))
-              .toList());
-
-
-          if (categoryList.isNotEmpty) {
-            id = categoryList[0].Id!;
+          Map<String, dynamic> queryParams = {};
+          if(selectedCategory != null){
+            queryParams["CategoryId"] = selectedCategory?.id;
+            queryParams["PageIndex"] = page;
+          }else{
+            queryParams["CategoryId"] = 0;
+            queryParams["DeviceManufacturer"] = "Google";
+            queryParams["DeviceModel"] = "Android SDK built for x86";
+            queryParams["DeviceToken"] = " ";
+            queryParams["PageIndex"] = 1;
           }
 
-          if (catList.isEmpty) {
-            lastPage = true;
+      var result = await postData("http://esptiles.imperoserver.in/api/API/Product/DashBoard", queryParams);
+
+      final catList = result.result["Category"] as  List;
+      loading = false;
+
+      if (catList.isNotEmpty) {
+        if(selectedCategory != null){
+          var category = CategoryModel.fromJson(catList.first);
+          selectedCategory?.subCatModel.addAll(category.subCatModel);
+          page++;
+        }else{
+          for (var element in catList) {
+            catModel.add(CategoryModel.fromJson(element));
           }
-          getSubCategoryData();
-          notifyListeners();
+          selectCategory(catModel.first);
         }
-      });
+      }
+      notifyListeners();
     }
   }
 
-  getSubCategoryData() async {
-
-    if (!lastPage && !loading) {
-      if (pageNo == 1) {
-        loading = true;
-        subCategoryList = [];
-        notifyListeners();
-      } else {
-        loading = true;
-        notifyListeners();
-      }
-
-      Map<String, dynamic> queryParams = {
-        "CategoryId":id,
-        "PageIndex":pageNo
-      };
-
-
-      ApiCategoryList.getCategoryData(queryParams, (response) {
-        if (response.status == Status.COMPLETED) {
-
-          loading  = false;
-          pageNo++;
-
-          if(response.data['Category'][0]["SubCategories"] != null) {
-            final List catList = (response.data['Category'][0]["SubCategories"] as List);
-
-            subCategoryList.addAll(catList
-                .map((val) => SubCategoriesModel.fromJson(val))
-                .toList());
-
-
-            if (categoryList.isNotEmpty) {
-              id = categoryList[0].Id!;
-            }
-
-            if (catList.isEmpty) {
-              lastPage = true;
-            }
-            notifyListeners();
-          }
-        }
-
-      });
-    }
-
+  selectCategory(CategoryModel categoryModel){
+    selectedCategory = categoryModel;
+    notifyListeners();
   }
 
+  getProductData(int index) async {
 
 
-  getProduct() async {
+    if (lastPageProduct == false) {
 
-    if (!lastPage && !loading) {
-      if (pageNo == 1) {
-        loading = true;
-        categoryList = [];
-        notifyListeners();
-      } else {
-        loading = true;
-        notifyListeners();
+      Map<String, dynamic> queryParams = {};
+
+        queryParams["SubCategoryId"] = selectedCategory?.subCatModel[index].id;
+        queryParams["PageIndex"] = selectedCategory?.subCatModel[index].productPage;
+
+
+        print(queryParams);
+
+      var result = await postData("http://esptiles.imperoserver.in/api/API/Product/ProductList", queryParams);
+      print(result.result);
+
+
+      if(result.result == []){
+        print("krunals");
+      }else{
+        print("vala");
       }
 
-      Map<String, dynamic> queryParams = {
-        "SubCategoryId":510,
-        "PageIndex":pageNo
-      };
 
-
-
-      ApiCategoryList.getProductData(queryParams, (response) {
-        if (response.status == Status.COMPLETED) {
-
-          loading  = false;
-          pageNo++;
-
-          final List productList = (response.data as List);
-
-          productListData.addAll(productList
-              .map((val) => ProductModel.fromJson(val))
-              .toList());
-
-
-          if (productList.isEmpty) {
-            lastPage = true;
-          }
+      if (result.result != ""){
+        for (var element in result.result) {
+          selectedCategory?.subCatModel[index].productList.add(ProductModel.fromJson(element));
         }
-        notifyListeners();
+        //selectedCategory!.subCatModel[index].loading = false;
+        selectedCategory!.subCatModel[index].lastPage == false;
+        selectedCategory?.subCatModel[index].productPage++;
+      }else{
+          print("krunalkjkjk");
+          lastPageProduct = true;
+      }
 
-      });
+      notifyListeners();
+
     }
-
-
-
   }
-
 
 }

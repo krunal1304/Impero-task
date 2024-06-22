@@ -1,6 +1,8 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/category_media_provider.dart';
@@ -26,15 +28,17 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
       _getCatList();
     });
 
+
     _mainController.addListener(() {
-      if (_mainController.position.maxScrollExtent - _mainController.position.pixels < 20) {
-        _getSubCatList();
+      if (_mainController.position.maxScrollExtent -
+          _mainController.position.pixels <
+          20) {
+        _getCatList();
       }
     });
 
 
   }
-
 
 
   @override
@@ -60,13 +64,18 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
         ),
         body: Consumer<CategoryMediaProvider>(builder: (context, provider, child){
           buildContext = context;
+
+          if (provider.catModel.isEmpty) {
+            return Container();
+          }
+
           return Column(
             children: [
               Container(
                 padding: const EdgeInsets.only(right: 16,),
                 height: 50,
                 child: ListView.builder(
-                  itemCount: provider.categoryList.length,
+                  itemCount: provider.catModel.length,
                   scrollDirection: Axis.horizontal,
                   itemBuilder: (context, index) {
                     return Container(
@@ -74,7 +83,7 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
                       margin: const EdgeInsets.only(left: 16) ,// Set a fixed height for each item
                       alignment: Alignment.center,  // Center the content of the container
                       child: Text(
-                        provider.categoryList[index].Name.toString(),
+                        provider.catModel[index].name,
                         style: TextStyle(
                           fontSize: index == 0 ? 20 : 16,
                           color: index == 0 ? Colors.white : Colors.grey,// Larger font for the first item, smaller for others
@@ -100,7 +109,7 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
                       physics: const BouncingScrollPhysics(),
                       //padding: const EdgeInsets.only(bottom: 24),
                       shrinkWrap: true,
-                      itemCount: provider.subCategoryList.length ,
+                      itemCount: provider.selectedCategory?.subCatModel.length  ?? 0,
                       itemBuilder: (context, index) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +120,7 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: 8),
                               child: Text(
-                                provider.subCategoryList[index].name!,
+                                provider.selectedCategory?.subCatModel?[index].name ?? '',
                                 style: TextStyle(
                                   fontSize:  16 ,
                                   color: Colors.black,
@@ -121,71 +130,82 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
                             const SizedBox(
                               height: 8,
                             ),
-                            SizedBox(
-                              height: 130,
-                              child: ListView.builder(
-                                itemCount: provider.subCategoryList[index].productList!.length,
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.only(right: 16),
-                                physics: const BouncingScrollPhysics(),
-                                scrollDirection: Axis.horizontal,
-                                itemBuilder: (context, productIndex) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(left: 8,right: 8),
-                                    child: Column(
-                                      children: [
-                                        Stack(
-                                            children:[
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
-                                                child: Container(
-                                                  height: 100,
-                                                  width: 115,
-                                                  //color: Colors.black,
-                                                  decoration: BoxDecoration(
-                                                      image: DecorationImage(image: NetworkImage(
-                                                          provider.subCategoryList[index].productList![productIndex].imageName!
-                                                      ),fit: BoxFit.cover)
+                            NotificationListener<ScrollNotification>(
+                              onNotification: (ScrollNotification notification) {
+                                if (notification is ScrollEndNotification) {
+                                 print("krunal");
+
+                                 if(provider.selectedCategory?.subCatModel[index].lastPage == false){
+                                   _getProductist(index);
+                                 }
+
+                                }
+                                return true;
+                              },
+                              child: SizedBox(
+                                height: 130,
+                                child: ListView.builder(
+                                  itemCount: provider.selectedCategory?.subCatModel[index].productList.length,
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.only(right: 16),
+                                  physics: const BouncingScrollPhysics(),
+                                  scrollDirection: Axis.horizontal,
+                                  itemBuilder: (context, productIndex) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(left: 8,right: 8),
+                                      child: Column(
+                                        children: [
+                                          Stack(
+                                              children:[
+                                                ClipRRect(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  child: Container(
+                                                    height: 100,
+                                                    width: 115,
+                                                    //color: Colors.black,
+                                                    decoration: BoxDecoration(
+                                                        image: DecorationImage(image: NetworkImage(
+                                                            provider.selectedCategory?.subCatModel[index].productList![productIndex].imageName!! ?? ""
+                                                        ),fit: BoxFit.cover)
+                                                    ),
+                                                    child: Image(image: CachedNetworkImageProvider(provider.selectedCategory?.subCatModel[index].productList![productIndex].imageName ?? "")),
                                                   ),
-                                                  // child: Image(image: CachedNetworkImageProvider(provider.categoryList[0].SubCategories![index].productList![indexs].imageName!)),
                                                 ),
-                                              ),
-                                              Positioned(
-                                                top:10,
-                                                left:10,
-                                                child: Container(
-                                                  width: 40,
-                                                  height: 20,
-                                                  decoration: const BoxDecoration(
-                                                      color: Colors.blue,
-                                                      borderRadius: BorderRadius.all(Radius.circular(2))
-                                                  ),
-                                                  child: Text(
-                                                    provider.subCategoryList[index].productList![productIndex].priceCode!,
-                                                    textAlign: TextAlign.center,
-                                                    style: const TextStyle(
-                                                      fontSize:  12 ,
-                                                      color: Colors.white,
+                                                Positioned(
+                                                  top:10,
+                                                  left:10,
+                                                  child: Container(
+                                                    width: 40,
+                                                    height: 20,
+                                                    decoration: const BoxDecoration(
+                                                        color: Colors.blue,
+                                                        borderRadius: BorderRadius.all(Radius.circular(2))
+                                                    ),
+                                                    child: Text(
+                                                      "sdsdkj",
+                                                      textAlign: TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontSize:  12 ,
+                                                        color: Colors.white,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              )
-                                            ]
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 8),
-                                          child: Text(
-                                            provider.subCategoryList[index].productList![productIndex].name!.length > 10 ? provider.subCategoryList[index].productList![productIndex].name!.substring(0,10) : provider.subCategoryList[index].productList![productIndex].name!,
-                                            style: const TextStyle(
-                                              fontSize:  12 ,
-                                              color: Colors.grey,
+                                                )
+                                              ]
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 8),
+                                            child: Text("dfdf",style: const TextStyle(
+                                                fontSize:  12 ,
+                                                color: Colors.grey,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                             const SizedBox(
@@ -206,19 +226,11 @@ class _CategoryWiseListScreenState extends State<CategoryWiseListScreen> {
     );
   }
 
-
   _getCatList() {
     Provider.of<CategoryMediaProvider>(buildContext, listen: false).getCategoryData();
   }
 
-  _getSubCatList() {
-    Provider.of<CategoryMediaProvider>(buildContext, listen: false).getSubCategoryData();
+  _getProductist(int index) {
+    Provider.of<CategoryMediaProvider>(buildContext, listen: false).getProductData(index);
   }
-
-  _getProductList() {
-    Provider.of<CategoryMediaProvider>(buildContext, listen: false).getProduct();
-  }
-
-
-
 }
