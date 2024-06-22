@@ -83,8 +83,13 @@ class CategoryMediaProvider extends BaseProvider {
         print("vala");
       }
 
+      if ((result.result as List).isEmpty){
+        print("krunals");
+      }else{
+        print("vala");
+      }
 
-      if (result.result != ""){
+      if ((result.result as List).isNotEmpty){
         for (var element in result.result) {
           selectedCategory?.subCatModel[index].productList.add(ProductModel.fromJson(element));
         }
